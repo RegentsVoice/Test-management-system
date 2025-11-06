@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">Редактирование теста: {{ test.title }}</h4>
+                <a href="{{ url_for('test_codes', test_id=test.test_id) }}" class="btn btn-success">Управление кодами</a>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('add_question', test_id=test.test_id) }}" method="POST">
+                    <h5>Добавить вопрос</h5>
+                    <div class="mb-3">
+                        <label class="form-label">Текст вопроса:</label>
+                        <input type="text" class="form-control" name="text" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Порядковый номер:</label>
+                        <input type="number" class="form-control" name="order" value="{{ (questions|length + 1) if questions else 1 }}" required>
+                    </div>
+                    
+                    <h6>Варианты ответов:</h6>
+                    {% for i in range(4) %}
+                    <div class="mb-2">
+                        <div class="input-group">
+                            <span class="input-group-text">{{ i + 1 }}</span>
+                            <input type="text" class="form-control" name="options[]" placeholder="Вариант ответа {{ i + 1 }}" required>
+                            <div class="input-group-text">
+                                <input class="form-check-input" type="radio" name="correct_index" value="{{ i }}" {% if i == 0 %}checked{% endif %}>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <small class="text-muted">Отметьте правильный вариант</small>
+                    
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-primary">Добавить вопрос</button>
+                    </div>
+                </form>
+                
+                <hr class="my-4">
+                
+                <h5>Вопросы теста</h5>
+                {% if questions %}
+                <div class="list-group">
+                    {% for question in questions %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6>Вопрос {{ question.question_order }}: {{ question.text }}</h6>
+                                    <div>
+                                        <a href="{{ url_for('edit_question', question_id=question.question_id) }}" class="btn btn-sm btn-primary">Редактировать</a>
+                                        <button class="btn btn-sm btn-danger" onclick="deleteQuestion({{ question.question_id }})">Удалить</button>
+                                    </div>
+                                </div>
+                                <div class="ms-3">
+                                    {% for option in question.options %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" disabled {% if option.is_correct %}checked{% endif %}>
+                                        <label class="form-check-label {% if option.is_correct %}text-success fw-bold{% endif %}">
+                                            {{ option.text }}
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    Вопросов пока нет. Добавьте первый вопрос выше.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Настройки теста</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('update_test', test_id=test.test_id) }}" method="POST">
+                    <div class="mb-3">
+                        <label for="edit_title" class="form-label">Название:</label>
+                        <input type="text" class="form-control" id="edit_title" name="title" value="{{ test.title }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_description" class="form-label">Описание:</label>
+                        <textarea class="form-control" id="edit_description" name="description" rows="3">{{ test.description or '' }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" {% if test.is_active %}checked{% endif %}>
+                            <label class="form-check-label" for="is_active">Активный тест</label>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Сохранить изменения</button>
+                </form>
+                
+                <hr class="my-3">
+                
+                <div class="text-center">
+                    <a href="{{ url_for('tests') }}" class="btn btn-secondary">← Назад к списку тестов</a>
+                </div>
+                
+                <hr class="my-3">
+                
+                <div class="text-center">
+                    <h6 class="text-danger">Опасная зона</h6>
+                    <button class="btn btn-danger w-100" onclick="deleteTest({{ test.test_id }}, '{{ test.title }}')">
+                        Удалить тест
+                    </button>
+                    <small class="text-muted">Все вопросы и коды будут удалены безвозвратно</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function deleteTest(testId, testTitle) {
+    if (confirm(`ВНИМАНИЕ! Вы собираетесь удалить тест "${testTitle}".\n\nВсе вопросы, варианты ответов и коды этого теста будут безвозвратно удалены.\n\nЭто действие нельзя отменить!`)) {
+        fetch(`/tests/${testId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                window.location.href = '/tests';
+            } else {
+                alert('Ошибка: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Ошибка: ' + error);
+        });
+    }
+}
+
+function deleteQuestion(questionId) {
+    if (confirm('Вы уверены, что хотите удалить этот вопрос? Все варианты ответов также будут удалены.')) {
+        fetch(`/questions/${questionId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Ошибка: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Ошибка: ' + error);
+        });
+    }
+}
+</script>
+{% endblock %}

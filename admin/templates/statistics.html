@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1 class="mb-4">Статистика</h1>
+        
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card text-white bg-primary mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ stats.total_users }}</h5>
+                        <p class="card-text">Всего пользователей</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-success mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ stats.total_tests_taken }}</h5>
+                        <p class="card-text">Пройдено тестов</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-info mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ stats.avg_score }}%</h5>
+                        <p class="card-text">Средний результат</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-warning mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title" id="clear-data-btn" style="cursor: pointer;">Очистить данные</h5>
+                        <p class="card-text">Пользовательские данные</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Статистика по тестам</h5>
+            </div>
+            <div class="card-body">
+                {% if stats.tests_stats %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Название теста</th>
+                                <th>Всего кодов</th>
+                                <th>Использовано кодов</th>
+                                <th>Процент использования</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for test in stats.tests_stats %}
+                            <tr>
+                                <td>{{ test[0] }}</td>
+                                <td>{{ test[1] }}</td>
+                                <td>{{ test[2] }}</td>
+                                <td>{{ test[3] }}</td>
+                                <td>
+                                    {% if test[2] > 0 %}
+                                    {{ (test[3] * 100 / test[2]) | round(1) }}%
+                                    {% else %}
+                                    0%
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    Статистика пока недоступна. Создайте тесты и сгенерируйте коды.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('clear-data-btn').addEventListener('click', function() {
+    if (confirm('ВНИМАНИЕ! Это удалит ВСЕ пользовательские данные, результаты тестов и сбросит все коды. Продолжить?')) {
+        fetch('{{ url_for("clear_data") }}', { 
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Данные успешно очищены');
+                location.reload();
+            } else {
+                alert('Ошибка: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Ошибка: ' + error);
+        });
+    }
+});
+</script>
+{% endblock %}

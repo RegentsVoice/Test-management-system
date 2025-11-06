@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Управление тестами</h1>
+    <a href="{{ url_for('create_test') }}" class="btn btn-primary">Создать тест</a>
+</div>
+
+{% if tests %}
+<div class="row">
+    {% for test in tests %}
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">{{ test.title }}</h5>
+                <p class="card-text">{{ test.description or 'Без описания' }}</p>
+                <div class="d-flex justify-content-between">
+                    <small class="text-muted">Создан: {{ test.created_at[:10] }}</small>
+                    <div>
+                        {% if test.is_active %}
+                        <span class="badge bg-success">Активен</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Неактивен</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <a href="{{ url_for('edit_test', test_id=test.test_id) }}" class="btn btn-sm btn-primary">Редактировать</a>
+                    <a href="{{ url_for('test_codes', test_id=test.test_id) }}" class="btn btn-sm btn-success">Коды</a>
+                    <button class="btn btn-sm btn-danger" onclick="deleteTest({{ test.test_id }}, '{{ test.title }}')">Удалить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">
+    Тестов пока нет. <a href="{{ url_for('create_test') }}">Создайте первый тест</a>.
+</div>
+{% endif %}
+
+<script>
+function deleteTest(testId, testTitle) {
+    if (confirm(`Вы уверены, что хотите удалить тест "${testTitle}"? Все вопросы и коды также будут удалены.`)) {
+        fetch(`/tests/${testId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Ошибка: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Ошибка: ' + error);
+        });
+    }
+}
+</script>
+{% endblock %}
