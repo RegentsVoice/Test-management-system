@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">Добавление сотрудника для теста: {{ test.title }}</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="full_name" class="form-label">ФИО сотрудника *</label>
+                                <input type="text" class="form-control" id="full_name" name="full_name" required placeholder="Иванов Иван Иванович">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="position" class="form-label">Должность *</label>
+                                <input type="text" class="form-control" id="position" name="position" required placeholder="Менеджер по продажам">
+                                <div class="form-text">Укажите предполагаемую или текущую должность</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="department" class="form-label">Отдел/Подразделение</label>
+                        <input type="text" class="form-control" id="department" name="department" placeholder="Отдел продаж">
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <strong>📋 Процесс работы с сотрудником:</strong>
+                        <ol class="mb-0 mt-2">
+                            <li>Добавьте сотрудника с ФИО и должностью</li>
+                            <li>Сгенерируйте персональные коды для тестирования</li>
+                            <li>Передайте коды сотруднику</li>
+                            <li>Отслеживайте результаты в личном кабинете сотрудника</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            👥 Добавить сотрудника
+                        </button>
+                        <a href="{{ url_for('test_candidates', test_id=test.test_id) }}" class="btn btn-secondary">Отмена</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

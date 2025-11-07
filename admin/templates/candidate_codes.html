@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Коды для: {{ candidate.full_name }}</h1>
+            <div>
+                <a href="{{ url_for('test_candidates', test_id=test.test_id) }}" class="btn btn-secondary">← Назад к кандидатам</a>
+                <a href="{{ url_for('edit_candidate', candidate_id=candidate.candidate_id) }}" class="btn btn-outline-primary">Редактировать</a>
+            </div>
+        </div>
+
+        <!-- Информация о кандидате -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Информация о сотруднике</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-bordered">
+                            <tr>
+                                <th>ФИО:</th>
+                                <td><strong>{{ candidate.full_name }}</strong></td>
+                            </tr>
+                            <tr>
+                                <th>Должность:</th>
+                                <td>{{ candidate.position or 'Не указана' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Отдел:</th>
+                                <td>{{ candidate.department or 'Не указан' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Тест:</th>
+                                <td>{{ test.title }}</td>
+                            </tr>
+                            <tr>
+                                <th>Дата добавления:</th>
+                                <td>{{ candidate.created_at[:16] }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Статистика тестирования</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if candidate_results and candidate_results.results %}
+                        <div class="text-center">
+                            {% set best_result = candidate_results.results[0] %}
+                            {% set best_score = (best_result[4] / best_result[5] * 100)|round|int %}
+                            <h3 class="text-{% if best_score >= 80 %}success{% elif best_score >= 60 %}warning{% else %}danger{% endif %}">
+                                {{ best_score }}%
+                            </h3>
+                            <p class="mb-1">Лучший результат</p>
+                            <small class="text-muted">Всего попыток: {{ candidate_results.results|length }}</small>
+                        </div>
+                        {% else %}
+                        <div class="text-center">
+                            <h3 class="text-muted">-</h3>
+                            <p class="mb-1">Нет результатов</p>
+                            <small class="text-muted">Сотрудник еще не проходил тест</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Генерация кодов -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Генерация персональных кодов</h5>
+            </div>
+            <div class="card-body">
+                <form id="generateCodesForm">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label for="count" class="form-label">Количество кодов:</label>
+                            <input type="number" class="form-control" id="count" name="count" min="1" max="10" value="1" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="purpose" class="form-label">Назначение:</label>
+                            <select class="form-control" id="purpose" name="purpose">
+                                <option value="Основное тестирование">Основное тестирование</option>
+                                <option value="Повторное тестирование">Повторное тестирование</option>
+                                <option value="Обучение">Обучение</option>
+                                <option value="Пробное тестирование">Пробное тестирование</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-success w-100">
+                                <i class="fas fa-key"></i> Сгенерировать коды
+                            </button>
+                        </div>
+                    </div>
+                    <small class="text-muted">
+                        💡 Можно сгенерировать несколько кодов если сотруднику нужно несколько попыток (пересдача, обучение и т.д.)
+                    </small>
+                </form>
+            </div>
+        </div>
+
+        <!-- Список кодов -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Персональные коды сотрудника</h5>
+                <div>
+                    <span class="badge bg-primary">Всего: {{ codes|length }}</span>
+                    <span class="badge bg-success">Использовано: {{ codes|selectattr('is_used')|list|length }}</span>
+                    <span class="badge bg-secondary">Активно: {{ codes|rejectattr('is_used')|list|length }}</span>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if codes %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Код</th>
+                                <th>Статус</th>
+                                <th>Создан</th>
+                                <th>Кем создан</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for code in codes %}
+                            <tr>
+                                <td>
+                                    <code class="fs-5 fw-bold">{{ code.code }}</code>
+                                    {% if not code.is_used %}
+                                    <span class="badge bg-info ms-1">Новый</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if code.is_used %}
+                                    <span class="badge bg-success">✅ Использован</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">⏳ Активен</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ code.created_at[:16] }}</td>
+                                <td>
+                                    {% set creator = namespace(username='Система') %}
+                                    {% for admin in admins %}
+                                        {% if admin.user_id == code.created_by %}
+                                            {% set creator.username = admin.username %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {{ creator.username }}
+                                </td>
+                                <td>
+                                    {% if not code.is_used %}
+                                    <button class="btn btn-sm btn-outline-primary" onclick="copyCode('{{ code.code }}')" title="Копировать код">
+                                        📋 Копировать
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-info" onclick="shareCode('{{ code.code }}', '{{ candidate.full_name }}', '{{ test.title }}')" title="Поделиться">
+                                        📤 Поделиться
+                                    </button>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Экспорт кодов -->
+                <div class="mt-3">
+                    <button class="btn btn-outline-success btn-sm" onclick="exportCodes()">
+                        📄 Экспортировать все коды в CSV
+                    </button>
+                </div>
+                {% else %}
+                <div class="alert alert-info text-center">
+                    <h5>Кодов пока нет</h5>
+                    <p>Сгенерируйте первые коды для сотрудника выше</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Результаты тестирования -->
+        {% if candidate_results and candidate_results.results %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">История тестирования</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Дата прохождения</th>
+                                <th>Результат</th>
+                                <th>Баллы</th>
+                                <th>Использованный код</th>
+                                <th>Пользователь Telegram</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for result in candidate_results.results %}
+                            <tr>
+                                <td>{{ result[6][:16] }}</td>
+                                <td>
+                                    {% set score_percent = (result[4] / result[5] * 100)|round|int %}
+                                    <span class="badge {% if score_percent >= 80 %}bg-success{% elif score_percent >= 60 %}bg-warning{% else %}bg-danger{% endif %}">
+                                        {{ score_percent }}%
+                                    </span>
+                                </td>
+                                <td>{{ result[4] }}/{{ result[5] }}</td>
+                                <td><code>{{ result[3] }}</code></td>
+                                <td>
+                                    {% if result[8] %}
+                                    {{ result[8] }} ({{ result[7] }})
+                                    {% else %}
+                                    {{ result[7] }}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.getElementById('generateCodesForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const count = document.getElementById('count').value;
+    const purpose = document.getElementById('purpose').value;
+    const formData = new FormData();
+    formData.append('count', count);
+    formData.append('purpose', purpose);
+    
+    fetch('{{ url_for("generate_candidate_codes", candidate_id=candidate.candidate_id) }}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`✅ Успешно сгенерировано ${data.count} кодов для сотрудника!\n\nСкопируйте коды и передайте сотруднику.`);
+            location.reload();
+        } else {
+            alert('❌ Ошибка при генерации кодов: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('❌ Ошибка: ' + error);
+    });
+});
+
+function copyCode(code) {
+    navigator.clipboard.writeText(code).then(function() {
+        alert('✅ Код ' + code + ' скопирован в буфер обмена!\n\nПередайте его сотруднику.');
+    }, function(err) {
+        alert('❌ Ошибка копирования: ' + err);
+    });
+}
+
+function shareCode(code, fullName, testTitle) {
+    const message = `🔐 Персональный код для тестирования\n\nСотрудник: ${fullName}\nТест: ${testTitle}\nКод: ${code}\n\nИспользуйте этот код в боте для начала тестирования.`;
+    
+    if (navigator.share) {
+        navigator.share({
+            title: 'Код для тестирования',
+            text: message
+        });
+    } else {
+        navigator.clipboard.writeText(message).then(function() {
+            alert('✅ Информация о коде скопирована для отправки сотруднику!');
+        });
+    }
+}
+
+function exportCodes() {
+    // Простая реализация экспорта
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Код,Статус,Создан,Сотрудник,Должность,Отдел,Тест\n";
+    
+    {% for code in codes %}
+    csvContent += "{{ code.code }},{% if code.is_used %}Использован{% else %}Активен{% endif %},{{ code.created_at[:16] }},{{ candidate.full_name }},{{ candidate.position or '' }},{{ candidate.department or '' }},{{ test.title }}\n";
+    {% endfor %}
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "коды_{{ candidate.full_name }}.csv");
+    document.body.appendChild(link);
+    link.click();
+}
+</script>
+{% endblock %}
